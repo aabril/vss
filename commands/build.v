@@ -45,8 +45,8 @@ fn new_build_cmd() cli.Command {
 		execute: fn (cmd cli.Command) ! {
 			mut logger := log.Log{}
 			logger.set_level(log.Level.info)
-			config := load_config(commands.default_config)!
-			build(config, mut logger) or {
+			conf := load_config(commands.default_config)!
+			build(conf, mut logger) or {
 				logger.error(err.msg())
 				println('Build failed')
 			}
@@ -99,13 +99,32 @@ fn get_content(path string) !string {
 	return markdown.to_html(md)
 }
 
+fn check_layout(path string) bool {
+	// check if layout is specified in front matter
+	// if not, use default layout
+	// if specified, check if layout file exists
+	// if not, return error
+	return true
+}
+
 fn (mut b Builder) md2html(md_path string) ! {
 	// get html body content from md
+	b.logger.info('start md to html: ${md_path}')
 	content := get_content(md_path)!
 	// want to change from contents to content
 	b.config_map['contents'] = content
-	html := template.parse(b.template_content, b.config_map)
+	// parse template
 	html_path := get_html_path(md_path)
+	mut template_content := ''
+	if os.exists('layouts/${html_path}') {
+		b.logger.info('use custom template: layouts/${html_path}')
+		template_content = os.read_file('layouts/${html_path}')!
+	} else {
+		b.logger.info('use default template')
+		template_content = b.template_content
+	}
+
+	html := template.parse(template_content, b.config_map)
 	dist_path := os.join_path(b.dist, html_path)
 	if !os.exists(os.dir(dist_path)) {
 		os.mkdir_all(os.dir(dist_path))!
@@ -148,14 +167,14 @@ fn (mut b Builder) is_ignore(path string) bool {
 	return false
 }
 
-fn build(config config.Config, mut logger log.Log) ! {
+fn build(conf config.Config, mut logger log.Log) ! {
 	println('Start building')
 	mut sw := time.new_stopwatch()
 	mut b := new_builder(logger)
 	template_content := os.read_file(commands.default_template)!
 	b.template_content = template_content
-	b.config = config
-	b.config_map = config.as_map()
+	b.config = conf
+	b.config_map = conf.as_map()
 
 	b.create_dist_dir()!
 	// copy static dir files

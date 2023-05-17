@@ -73,7 +73,7 @@ mut:
 	time_stamp i64
 }
 
-fn watch(path string, config config.Config, mut logger log.Log) {
+fn watch(path string, conf config.Config, mut logger log.Log) {
 	mut res := []string{}
 	os.walk_with_context(path, &res, fn (mut res []string, fpath string) {
 		res << fpath
@@ -99,7 +99,7 @@ fn watch(path string, config config.Config, mut logger log.Log) {
 				println('modified file: ${w.path}')
 				w.time_stamp = now
 
-				build(config, mut logger) or {
+				build(conf, mut logger) or {
 					logger.error(err.msg())
 					println('Build failed')
 				}
@@ -118,17 +118,17 @@ fn serve(mut logger log.Log) ! {
 	}
 
 	local_base_url := 'http://localhost:${commands.cport}/'
-	mut config := load_config(default_config)!
-	config.base_url = local_base_url
+	mut conf := load_config(default_config)!
+	conf.base_url = local_base_url
 	println(local_base_url)
 
 	// build before server startup
-	build(config, mut logger) or {
+	build(conf, mut logger) or {
 		logger.error(err.msg())
 		println('Build failed')
 	}
 
-	w := spawn watch('.', config, mut logger)
+	w := spawn watch('.', conf, mut logger)
 	server.listen_and_serve()
 
 	w.wait()
