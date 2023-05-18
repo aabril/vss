@@ -113,12 +113,17 @@ fn (mut b Builder) md2html(md_path string) ! {
 	content := get_content(md_path)!
 	// want to change from contents to content
 	b.config_map['contents'] = content
+
 	// parse template
 	html_path := get_html_path(md_path)
+	dir := os.dir(md_path)
 	mut template_content := ''
 	if os.exists('layouts/${html_path}') {
 		b.logger.info('use custom template: layouts/${html_path}')
 		template_content = os.read_file('layouts/${html_path}')!
+	} else if os.exists('layouts/${dir}/index.html') {
+		b.logger.info('use custom template: layouts/${dir}/index.html')
+		template_content = os.read_file('layouts/${dir}/index.html')!
 	} else {
 		b.logger.info('use default template')
 		template_content = b.template_content
