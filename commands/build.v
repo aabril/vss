@@ -72,26 +72,8 @@ fn normalise_paths(paths []string) []string {
 	return res
 }
 
-// pre_proc_md_to_html convert markdown relative links to html relative links
-fn pre_proc_md_to_html(contents string) !string {
-	lines := contents.split_into_lines()
-	mut parsed_lines := []string{len: lines.len}
-	mut re := regex.regex_opt(r'\[.+\]\(.+\.md\)') or { return err }
-
-	for i, line in contents.split_into_lines() {
-		start, end := re.find(line)
-		if start >= 0 && end > start {
-			parsed_lines[i] = line.replace('.md', '.html')
-		} else {
-			parsed_lines[i] = line
-		}
-	}
-	return parsed_lines.join('\n')
-}
-
 fn get_md_content(path string) !string {
-	md := os.read_file(path)!
-	return pre_proc_md_to_html(md)
+	return os.read_file(path)!
 }
 
 fn get_content(path string) !string {
