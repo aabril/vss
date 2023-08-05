@@ -6,6 +6,6 @@ A static site generator
 
 ## Pages
 
-- [about page](./about.md)
+- [about page](./about)
 - post
-  - [first](./post/first.md)
+  - [first](./post/first)
