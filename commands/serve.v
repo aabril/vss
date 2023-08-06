@@ -8,7 +8,8 @@ import internal.config
 
 const cport = 8080
 
-fn new_serve_cmd() cli.Command {
+// new_serve_cmd returns a cli.Command for serve command
+pub fn new_serve_cmd() cli.Command {
 	return cli.Command{
 		name: 'serve'
 		description: 'serve dist'

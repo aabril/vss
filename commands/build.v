@@ -4,7 +4,6 @@ import os
 import cli
 import log
 import time
-import regex
 import markdown
 import internal.template
 import internal.config
@@ -37,7 +36,8 @@ fn new_builder(logger log.Log) Builder {
 	}
 }
 
-fn new_build_cmd() cli.Command {
+// new_build_cmd returns a cli.Command for build command
+pub fn new_build_cmd() cli.Command {
 	return cli.Command{
 		name: 'build'
 		description: 'build your site'

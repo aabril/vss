@@ -20,7 +20,7 @@ pub mut:
 	base_url    string
 }
 
-// load
+// load config from toml text
 pub fn load(toml_text string) !Config {
 	doc := toml.parse_text(toml_text)!
 
