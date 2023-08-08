@@ -50,7 +50,7 @@ tasks:
     desc: Mkdir dist
     cmds:
       - task: clean
-      - task: build
+      - task: prod-build
       - task build:archive
 
   build:
