@@ -1,14 +1,11 @@
 module commands
 
 import os
-import cli
 import log
 import time
 import markdown
 import internal.template
 import internal.config
-
-const default_config = 'config.toml'
 
 const default_template = 'layouts/index.html'
 
@@ -18,7 +15,7 @@ const default_index = 'index.md'
 
 const default_dist = 'dist'
 
-struct Builder {
+struct BuildCommand {
 mut:
 	config           config.Config
 	logger           log.Log
@@ -28,29 +25,14 @@ mut:
 	config_map       map[string]string
 }
 
-fn new_builder(logger log.Log) Builder {
-	return Builder{
+// new_build_cmd create new build command instance.
+pub fn new_build_cmd(conf config.Config, logger log.Log) BuildCommand {
+	return BuildCommand{
+		config: conf
 		logger: logger
 		dist: commands.default_dist
 		static_dir: commands.defautl_static
-	}
-}
-
-// new_build_cmd returns a cli.Command for build command
-pub fn new_build_cmd() cli.Command {
-	return cli.Command{
-		name: 'build'
-		description: 'build your site'
-		usage: 'vss build'
-		execute: fn (cmd cli.Command) ! {
-			mut logger := log.Log{}
-			logger.set_level(log.Level.info)
-			conf := load_config(commands.default_config)!
-			build(conf, mut logger) or {
-				logger.error(err.msg())
-				println('Build failed')
-			}
-		}
+		config_map: conf.as_map()
 	}
 }
 
@@ -89,7 +71,7 @@ fn check_layout(path string) bool {
 	return true
 }
 
-fn (mut b Builder) md2html(md_path string) ! {
+fn (mut b BuildCommand) md2html(md_path string) ! {
 	// get html body content from md
 	b.logger.info('start md to html: ${md_path}')
 	content := get_content(md_path)!
@@ -119,21 +101,15 @@ fn (mut b Builder) md2html(md_path string) ! {
 	os.write_file(dist_path, html)!
 }
 
-// load_config loads a toml config file
-fn load_config(toml_file string) !config.Config {
-	toml_text := os.read_file(toml_file)!
-	return config.load(toml_text)
-}
-
 // copy_static copy static files to dist
-fn (b Builder) copy_static() ! {
+fn (b BuildCommand) copy_static() ! {
 	if os.exists(b.static_dir) {
 		os.cp_all(b.static_dir, b.dist, false)!
 	}
 }
 
 // create_dist_dir create build output destination
-fn (mut b Builder) create_dist_dir() ! {
+fn (mut b BuildCommand) create_dist_dir() ! {
 	if os.exists(b.dist) {
 		b.logger.info('re-create dist dir')
 		os.rmdir_all(b.dist)!
@@ -144,7 +120,7 @@ fn (mut b Builder) create_dist_dir() ! {
 	}
 }
 
-fn (mut b Builder) is_ignore(path string) bool {
+fn (mut b BuildCommand) is_ignore(path string) bool {
 	// e.g. README.md
 	file_name := os.file_name(path)
 	// notify user that build was skipped
@@ -154,30 +130,33 @@ fn (mut b Builder) is_ignore(path string) bool {
 	return false
 }
 
-fn build(conf config.Config, mut logger log.Log) ! {
+fn (mut b BuildCommand) set_base_url(url string) {
+	b.config.base_url = url
+	b.config_map['base_url'] = url
+}
+
+// run build command main process
+pub fn (mut b BuildCommand) run() ! {
 	println('Start building')
 	mut sw := time.new_stopwatch()
-	mut b := new_builder(logger)
 	template_content := os.read_file(commands.default_template)!
 	b.template_content = template_content
-	b.config = conf
-	b.config_map = conf.as_map()
 
 	b.create_dist_dir()!
 	// copy static dir files
-	logger.info('copy static files')
+	b.logger.info('copy static files')
 	b.copy_static()!
 
 	mds := normalise_paths(os.walk_ext('.', '.md'))
-	logger.info('start md to html')
+	b.logger.info('start md to html')
 	for path in mds {
 		if b.is_ignore(path) {
-			logger.info('${path} is included in ignore_files, skip build')
+			b.logger.info('${path} is included in ignore_files, skip build')
 			continue
 		}
 		b.md2html(path)!
 	}
-	logger.info('end md to html')
+	b.logger.info('end md to html')
 
 	sw.stop()
 	println('Total in ' + sw.elapsed().milliseconds().str() + ' ms')
