@@ -1,6 +1,5 @@
 module commands
 
-import cli
 import log
 import net.http
 import os
@@ -8,20 +7,19 @@ import internal.config
 
 const cport = 8080
 
-// new_serve_cmd returns a cli.Command for serve command
-pub fn new_serve_cmd() cli.Command {
-	return cli.Command{
-		name: 'serve'
-		description: 'serve dist'
-		usage: 'vss serve'
-		execute: fn (cmd cli.Command) ! {
-			mut logger := log.Log{}
-			logger.set_level(log.Level.info)
-			serve(mut logger) or {
-				logger.error(err.msg())
-				println('serve failed')
-			}
-		}
+struct ServeCommand {
+mut:
+	logger   log.Log
+	port     int
+	buildcmd BuildCommand
+}
+
+// new_serve_cmd creates a new ServeCommand instance.
+pub fn new_serve_cmd(conf config.Config, logger log.Log) ServeCommand {
+	return ServeCommand{
+		logger: logger
+		port: commands.cport
+		buildcmd: new_build_cmd(conf, logger)
 	}
 }
 
@@ -74,7 +72,7 @@ mut:
 	time_stamp i64
 }
 
-fn watch(path string, conf config.Config, mut logger log.Log) {
+fn (mut s ServeCommand) watch(path string) {
 	mut res := []string{}
 	os.walk_with_context(path, &res, fn (mut res []string, fpath string) {
 		res << fpath
@@ -100,8 +98,8 @@ fn watch(path string, conf config.Config, mut logger log.Log) {
 				println('modified file: ${w.path}')
 				w.time_stamp = now
 
-				build(conf, mut logger) or {
-					logger.error(err.msg())
+				s.build() or {
+					s.logger.error(err.msg())
 					println('Build failed')
 				}
 			}
@@ -109,7 +107,12 @@ fn watch(path string, conf config.Config, mut logger log.Log) {
 	}
 }
 
-fn serve(mut logger log.Log) ! {
+fn (mut s ServeCommand) build() ! {
+	s.buildcmd.run()!
+}
+
+// run serve command main process.
+pub fn (mut s ServeCommand) run() ! {
 	mut handler := MyHttpHandler{
 		root: 'dist'
 	}
@@ -118,18 +121,18 @@ fn serve(mut logger log.Log) ! {
 		port: commands.cport
 	}
 
+	// base_url を localhost にする
 	local_base_url := 'http://localhost:${commands.cport}/'
-	mut conf := load_config(default_config)!
-	conf.base_url = local_base_url
-	println(local_base_url)
+	s.buildcmd.set_base_url(local_base_url)
 
-	// build before server startup
-	build(conf, mut logger) or {
-		logger.error(err.msg())
-		println('Build failed')
+	// build
+	s.build() or {
+		s.logger.error(err.msg())
+		println('build failed')
 	}
 
-	w := spawn watch('.', conf, mut logger)
+	println(local_base_url)
+	w := spawn s.watch('.')
 	server.listen_and_serve()
 
 	w.wait()
