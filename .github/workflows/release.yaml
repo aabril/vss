@@ -19,7 +19,7 @@ jobs:
         uses: arduino/setup-task@v1
 
       - name: Checkout ${{ github.event.repository.name }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install deps
         run: task setup
@@ -47,7 +47,7 @@ jobs:
         uses: arduino/setup-task@v1
 
       - name: Checkout ${{ github.event.repository.name }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install deps
         run: task setup
@@ -75,7 +75,7 @@ jobs:
         uses: arduino/setup-task@v1
 
       - name: Checkout ${{ github.event.repository.name }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install deps
         run: task setup
