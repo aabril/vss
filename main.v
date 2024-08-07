@@ -17,9 +17,9 @@ fn load_config(toml_file string) !config.Config {
 }
 
 fn init_logger() &log.Log {
-    mut l := log.Log{}
-    l.set_level(.info)
-    return &l
+	mut l := log.Log{}
+	l.set_level(.info)
+	return &l
 }
 
 fn init_commands() cli.Command {
